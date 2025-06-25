@@ -41,8 +41,8 @@ private:
     void transfer_room_temperature(float value);
 
     int frame_size_;
-    uint32_t room_temp_api_timeout_start_ = (uint32_t)(esp_timer_get_time() / 1000);
-    uint32_t room_temp_api_timeout_ = 0;
+    uint32_t room_temp_api_timeout_start_;
+    uint32_t room_temp_api_timeout_;
     bool room_temp_api_active_ = false;
 
     MHI_AC_Ctrl_Core mhi_ac_ctrl_core_;
