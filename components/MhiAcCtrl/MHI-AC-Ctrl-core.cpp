@@ -2,15 +2,20 @@
 // implements the core functions (read & write SPI)
 
 #include "MHI-AC-Ctrl-core.h"
+#include "driver/gpio.h"
+#include "esp_log.h"
+#include "esp_timer.h"
 
-uint16_t calc_checksum(byte* frame) {
+#define TAG "MHI_AC_CTRL_CORE"
+
+uint16_t calc_checksum(uint8_t* frame) {
   uint16_t checksum = 0;
   for (int i = 0; i < CBH; i++)
     checksum += frame[i];
   return checksum;
 }
 
-uint16_t calc_checksumFrame33(byte* frame) {
+uint16_t calc_checksumFrame33(uint8_t* frame) {
   uint16_t checksum = 0;
   for (int i = 0; i < CBL2; i++)
     checksum += frame[i];
@@ -53,14 +58,13 @@ void MHI_AC_Ctrl_Core::reset_old_values() {  // used e.g. when MQTT connection t
 }
 
 void MHI_AC_Ctrl_Core::init() {
-  //MeasureFrequency(m_cbiStatus);
-  pinMode(SCK_PIN, INPUT);
-  pinMode(MOSI_PIN, INPUT);
-  pinMode(MISO_PIN, OUTPUT);
+  gpio_set_direction((gpio_num_t)SCK_PIN, GPIO_MODE_INPUT);
+  gpio_set_direction((gpio_num_t)MOSI_PIN, GPIO_MODE_INPUT);
+  gpio_set_direction((gpio_num_t)MISO_PIN, GPIO_MODE_OUTPUT);
   MHI_AC_Ctrl_Core::reset_old_values();
 }
 
-void MHI_AC_Ctrl_Core::set_power(boolean power) {
+void MHI_AC_Ctrl_Core::set_power(bool power) {
   new_Power = 0b10 | power;
 }
 
@@ -68,11 +72,11 @@ void MHI_AC_Ctrl_Core::set_mode(ACMode mode) {
   new_Mode = 0b00100000 | mode;
 }
 
-void MHI_AC_Ctrl_Core::set_tsetpoint(uint tsetpoint) {
+void MHI_AC_Ctrl_Core::set_tsetpoint(uint32_t tsetpoint) {
   new_Tsetpoint = 0b10000000 | tsetpoint;
 }
 
-void MHI_AC_Ctrl_Core::set_fan(uint fan) {
+void MHI_AC_Ctrl_Core::set_fan(uint32_t fan) {
   new_Fan = 0b00001000 | fan;
 }
 
@@ -80,7 +84,7 @@ void MHI_AC_Ctrl_Core::set_3Dauto(AC3Dauto Dauto) {
   new_3Dauto = 0b00001010 | Dauto;
 }
 
-void MHI_AC_Ctrl_Core::set_vanes(uint vanes) {
+void MHI_AC_Ctrl_Core::set_vanes(uint32_t vanes) {
   if (vanes == vanes_swing) {
     new_Vanes0 = 0b11000000; // enable swing
   }
@@ -90,7 +94,7 @@ void MHI_AC_Ctrl_Core::set_vanes(uint vanes) {
   }
 }
 
-void MHI_AC_Ctrl_Core::set_vanesLR(uint vanesLR) {
+void MHI_AC_Ctrl_Core::set_vanesLR(uint32_t vanesLR) {
   if (vanesLR == vanesLR_swing) {
     new_VanesLR0 = 0b00001011; // enable swing
   }
@@ -104,8 +108,7 @@ void MHI_AC_Ctrl_Core::request_ErrOpData() {
   request_erropData = true;
 }
 
-void MHI_AC_Ctrl_Core::set_troom(byte troom) {
-  //Serial.printf("MHI_AC_Ctrl_Core::set_troom %i\n", troom);
+void MHI_AC_Ctrl_Core::set_troom(uint8_t troom) {
   new_Troom = troom;
 }
 
@@ -117,37 +120,35 @@ void MHI_AC_Ctrl_Core::set_troom_offset(float offset) {
   Troom_offset = offset;
 }
 
-void MHI_AC_Ctrl_Core::set_frame_size(byte framesize) {
+void MHI_AC_Ctrl_Core::set_frame_size(uint8_t framesize) {
   if (framesize == 20 || framesize == 33)
     frameSize = framesize;
 }
 
-int MHI_AC_Ctrl_Core::loop(uint max_time_ms) {
-  const byte opdataCnt = sizeof(opdata) / sizeof(byte) / 2;
-  static byte opdataNo = 0;               //
-  long startMillis = millis();             // start time of this loop run
-  byte MOSI_byte;                         // received MOSI byte
-  bool new_datapacket_received = false;   // indicated that a new frame was received
-  static byte erropdataCnt = 0;           // number of expected error operating data
+int MHI_AC_Ctrl_Core::loop(uint32_t max_time_ms) {
+  const uint8_t opdataCnt = sizeof(opdata) / sizeof(uint8_t) / 2;
+  static uint8_t opdataNo = 0;
+  int64_t startMillis = esp_timer_get_time() / 1000;
+  uint8_t MOSI_byte;
+  bool new_datapacket_received = false;
+  static uint8_t erropdataCnt = 0;
   static bool doubleframe = false;
   static int frame = 1;
-static byte MOSI_frame[33];
-  //                            sb0   sb1   sb2   db0   db1   db2   db3   db4   db5   db6   db7   db8   db9  db10  db11  db12  db13  db14  chkH  chkL  db15  db16  db17  db18  db19  db20  db21  db22  db23  db24  db25  db26  chk2L
-  static byte MISO_frame[] = { 0xA9, 0x00, 0x07, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x22 };
+  static uint8_t MOSI_frame[33];
+  static uint8_t MISO_frame[] = { 0xA9, 0x00, 0x07, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x22 };
 
-  static uint call_counter = 0;           // counts how often this loop was called
-  static unsigned long lastTroomInternalMillis = 0; // remember when Troom internal has changed
+  static uint call_counter = 0;
+  static int64_t lastTroomInternalMillis = 0;
   if (frameSize == 33)
     MISO_frame[0] = 0xAA;
 
-   
   call_counter++;
-  int SCKMillis = millis();               // time of last SCK low level
-  while (millis() - SCKMillis < 5) {      // wait for 5ms stable high signal to detect a frame start
-    if (!digitalRead(SCK_PIN))
-      SCKMillis = millis();
-    if (millis() - startMillis > max_time_ms)
-      return err_msg_timeout_SCK_low;       // SCK stuck@ low error detection
+  int64_t SCKMillis = esp_timer_get_time() / 1000;
+  while ((esp_timer_get_time() / 1000) - SCKMillis < 5) {
+    if (!gpio_get_level((gpio_num_t)SCK_PIN))
+      SCKMillis = esp_timer_get_time() / 1000;
+    if ((esp_timer_get_time() / 1000) - startMillis > max_time_ms)
+      return err_msg_timeout_SCK_low;
   }
   // build the next MISO frame
 
@@ -233,25 +234,22 @@ static byte MOSI_frame[33];
     checksum = calc_checksumFrame33(MISO_frame);
     MISO_frame[CBL2] = lowByte(checksum);
   }
-  //Serial.println();
-  //Serial.print(F("MISO:"));
   // read/write MOSI/MISO frame
   for (uint8_t byte_cnt = 0; byte_cnt < frameSize; byte_cnt++) { // read and write a data packet of 20 bytes
-    //Serial.printf("x%02x ", MISO_frame[byte_cnt]);
     MOSI_byte = 0;
-    byte bit_mask = 1;
+    uint8_t bit_mask = 1;
     for (uint8_t bit_cnt = 0; bit_cnt < 8; bit_cnt++) { // read and write 1 byte
-      SCKMillis = millis();
-      while (digitalRead(SCK_PIN)) { // wait for falling edge
-        if (millis() - startMillis > max_time_ms)
+      SCKMillis = esp_timer_get_time() / 1000;
+      while (gpio_get_level((gpio_num_t)SCK_PIN)) { // wait for falling edge
+        if ((esp_timer_get_time() / 1000) - startMillis > max_time_ms)
           return err_msg_timeout_SCK_high;       // SCK stuck@ high error detection
       } 
       if ((MISO_frame[byte_cnt] & bit_mask) > 0)
-        digitalWrite(MISO_PIN, 1);
+        gpio_set_level((gpio_num_t)MISO_PIN, 1);
       else
-        digitalWrite(MISO_PIN, 0);
-      while (!digitalRead(SCK_PIN)) {} // wait for rising edge
-      if (digitalRead(MOSI_PIN))
+        gpio_set_level((gpio_num_t)MISO_PIN, 0);
+      while (!gpio_get_level((gpio_num_t)SCK_PIN)) {} // wait for rising edge
+      if (gpio_get_level((gpio_num_t)MOSI_PIN))
         MOSI_byte += bit_mask;
       bit_mask = bit_mask << 1;
     }
@@ -276,7 +274,7 @@ static byte MOSI_frame[33];
   if (new_datapacket_received) {
 
     if (frameSize == 33) { // Only for framesize 33 (WF-RAC)
-      byte vanesLRtmp = (MOSI_frame[DB16] & 0x07) + ((MOSI_frame[DB17] & 0x01) << 4);
+      uint8_t vanesLRtmp = (MOSI_frame[DB16] & 0x07) + ((MOSI_frame[DB17] & 0x01) << 4);
       if (vanesLRtmp != status_vanesLR_old) { // Vanes Left Right
         if ((vanesLRtmp & 0x10) != 0) // Vanes LR status swing
           m_cbiStatus->cbiStatusFunction(status_vanesLR, vanesLR_swing);
@@ -302,14 +300,14 @@ static byte MOSI_frame[33];
       m_cbiStatus->cbiStatusFunction(status_power, status_power_old);
     }
 
-    uint fantmp = MOSI_frame[DB1] & 0x07;
+    uint8_t fantmp = MOSI_frame[DB1] & 0x07;
     if (fantmp != status_fan_old) {
       status_fan_old = fantmp;
       m_cbiStatus->cbiStatusFunction(status_fan, status_fan_old);
     }
 
     // Only updated when Vanes command via wired RC
-    uint vanestmp = (MOSI_frame[DB0] & 0xc0) + ((MOSI_frame[DB1] & 0xB0) >> 4);
+    uint8_t vanestmp = (MOSI_frame[DB0] & 0xc0) + ((MOSI_frame[DB1] & 0xB0) >> 4);
     if (vanestmp != status_vanes_old) {
       // if ((vanestmp & 0x88) == 0) // last vanes update was via IR-RC, so status is not known
       //   m_cbiStatus->cbiStatusFunction(status_vanes, vanes_unknown);
@@ -331,8 +329,8 @@ static byte MOSI_frame[33];
         lastTroomInternalMillis = 0;
       }
       else                                                               //  internal sensor used
-        if ((unsigned long)(millis() - lastTroomInternalMillis) > minTimeInternalTroom) { // Only publish when last change was more then minTimeInternalTroom ago
-          lastTroomInternalMillis = millis();
+        if ((unsigned long)(esp_timer_get_time() / 1000 - lastTroomInternalMillis) > minTimeInternalTroom) { // Only publish when last change was more then minTimeInternalTroom ago
+          lastTroomInternalMillis = esp_timer_get_time() / 1000;
           status_troom_old = MOSI_frame[DB3];
           m_cbiStatus->cbiStatusFunction(status_troom, status_troom_old);
         }
@@ -594,7 +592,7 @@ static byte MOSI_frame[33];
         break;
       default:    // unknown operating data
         m_cbiStatus->cbiStatusFunction(opdata_unknown, MOSI_frame[DB10] << 8 | MOSI_frame[DB9]);
-        Serial.printf("Unknown operating data, MOSI_frame[DB9]=%i MOSI_frame[D10]=%i\n", MOSI_frame[DB9], MOSI_frame[DB10]);
+        ESP_LOGI(TAG, "Unknown operating data, MOSI_frame[DB9]=%i MOSI_frame[D10]=%i", MOSI_frame[DB9], MOSI_frame[DB10]);
     }
   }
   return call_counter;

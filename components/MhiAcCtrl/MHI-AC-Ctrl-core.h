@@ -1,9 +1,14 @@
 #pragma once
 
-#include <Arduino.h>
+#include <stdint.h>
+#include <stdbool.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // comment out the data you are not interested, but at least leave one row !
-const byte opdata[][2] PROGMEM = {
+static const uint8_t opdata[][2] = {
   { 0xc0, 0x02},  //  1 "MODE"
   { 0xc0, 0x05},  //  2 "SET-TEMP" [°C]
   { 0xc0, 0x80},  //  3 "RETURN-AIR" [°C]
@@ -24,7 +29,6 @@ const byte opdata[][2] PROGMEM = {
   { 0x40, 0x1e},  // 37 "TOTAL-COMP-RUN" [h]
   { 0x40, 0x13},  // 38 "OU-EEV" [Puls]
   { 0xc0, 0x94},  //    "energy-used" [kWh]
-
 };
 
 //#define NoFramesPerPacket 20                 // number of frames/packet, must be an even number
@@ -114,54 +118,54 @@ class CallbackInterface_Status {
 class MHI_AC_Ctrl_Core {
   private:
     // old status
-    byte status_power_old;
-    byte status_mode_old;
-    byte status_fan_old;
-    byte status_vanes_old;
-    byte status_troom_old;
-    byte status_tsetpoint_old;
-    byte status_errorcode_old;
+    uint8_t status_power_old;
+    uint8_t status_mode_old;
+    uint8_t status_fan_old;
+    uint8_t status_vanes_old;
+    uint8_t status_troom_old;
+    uint8_t status_tsetpoint_old;
+    uint8_t status_errorcode_old;
 
-    byte status_vanesLR_old;
-    byte status_3Dauto_old;
+    uint8_t status_vanesLR_old;
+    uint8_t status_3Dauto_old;
 
     // old operating data
     uint16_t op_kwh_old;
-    byte op_mode_old;
-    byte op_settemp_old;
-    byte op_return_air_old;
-    byte op_iu_fanspeed_old;
-    byte op_thi_r1_old;
-    byte op_thi_r2_old;
-    byte op_thi_r3_old;
-    byte op_total_iu_run_old;
-    byte op_outdoor_old;
-    byte op_tho_r1_old;
-    byte op_total_comp_run_old;
-    byte op_ct_old;
-    byte op_tdsh_old;
-    byte op_protection_no_old;
-    byte op_ou_fanspeed_old;
-    byte op_defrost_old;
+    uint8_t op_mode_old;
+    uint8_t op_settemp_old;
+    uint8_t op_return_air_old;
+    uint8_t op_iu_fanspeed_old;
+    uint8_t op_thi_r1_old;
+    uint8_t op_thi_r2_old;
+    uint8_t op_thi_r3_old;
+    uint8_t op_total_iu_run_old;
+    uint8_t op_outdoor_old;
+    uint8_t op_tho_r1_old;
+    uint16_t op_total_comp_run_old;
+    uint8_t op_ct_old;
+    uint8_t op_tdsh_old;
+    uint8_t op_protection_no_old;
+    uint8_t op_ou_fanspeed_old;
+    uint8_t op_defrost_old;
     uint16_t op_comp_old;
-    byte op_td_old;
+    uint8_t op_td_old;
     uint16_t op_ou_eev1_old;
 
     // for writing to AC
-    byte new_Power = 0;
-    byte new_Mode = 0;
-    byte new_Tsetpoint = 0;
-    byte new_Fan = 0;
-    byte new_Vanes0 = 0;
-    byte new_Vanes1 = 0;
+    uint8_t new_Power = 0;
+    uint8_t new_Mode = 0;
+    uint8_t new_Tsetpoint = 0;
+    uint8_t new_Fan = 0;
+    uint8_t new_Vanes0 = 0;
+    uint8_t new_Vanes1 = 0;
     bool request_erropData = false;
-    byte new_Troom = 0xff;    // writing 0xff to DB3 indicates the usage of the internal room temperature sensor
+    uint8_t new_Troom = 0xff;    // writing 0xff to DB3 indicates the usage of the internal room temperature sensor
     float Troom_offset = 0.0;
     
-    byte new_VanesLR0 = 0;
-    byte new_VanesLR1 = 0;
-    byte new_3Dauto = 0;
-    byte frameSize = 20;
+    uint8_t new_VanesLR0 = 0;
+    uint8_t new_VanesLR1 = 0;
+    uint8_t new_3Dauto = 0;
+    uint8_t frameSize = 20;
 
     CallbackInterface_Status *m_cbiStatus;
 
@@ -173,18 +177,22 @@ class MHI_AC_Ctrl_Core {
 
     void init();                          // initialization called once after boot
     void reset_old_values();              // resets the 'old' variables ensuring that all status information are resend
-    int loop(uint max_time_ms);           // receive / transmit a frame of 20 bytes
-    void set_power(boolean power);        // power on/off the AC
+    int loop(uint32_t max_time_ms);           // receive / transmit a frame of 20 bytes
+    void set_power(bool power);        // power on/off the AC
     void set_mode(ACMode mode);           // change AC mode (e.g. heat, dry, cool etc.)
-    void set_tsetpoint(uint tsetpoint);   // set the target temperature of the AC)
-    void set_fan(uint fan);               // set the requested fan speed
-    void set_vanes(uint vanes);           // set the vanes horizontal position (or swing)
-    void set_troom(byte temperature);     // set the room temperature used by AC (0xff indicates the usage of the internal room temperature sensor)
+    void set_tsetpoint(uint32_t tsetpoint);   // set the target temperature of the AC)
+    void set_fan(uint32_t fan);               // set the requested fan speed
+    void set_vanes(uint32_t vanes);           // set the vanes horizontal position (or swing)
+    void set_troom(uint8_t temperature);     // set the room temperature used by AC (0xff indicates the usage of the internal room temperature sensor)
     void request_ErrOpData();             // request that the AC provides the error data
     float get_troom_offset();             // get troom offset, only usefull when ENHANCED_RESOLUTION is used
     void set_troom_offset(float offset);  // set troom offset, only usefull when ENHANCED_RESOLUTION is used
-    void set_frame_size(byte framesize);  // set framesize to 20 or 33
+    void set_frame_size(uint8_t framesize);  // set framesize to 20 or 33
     void set_3Dauto(AC3Dauto Dauto);      // set the requested 3D auto mode
-    void set_vanesLR(uint vanesLR);       // set the vanes vertical position
+    void set_vanesLR(uint32_t vanesLR);       // set the vanes vertical position
 
 };
+
+#ifdef __cplusplus
+}
+#endif
