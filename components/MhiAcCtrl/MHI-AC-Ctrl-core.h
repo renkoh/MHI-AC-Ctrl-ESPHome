@@ -36,9 +36,9 @@ static const uint8_t opdata[][2] = {
 #define minTimeInternalTroom 5000              // minimal time in ms used for Troom internal sensor changes for publishing to avoid jitter 
 
 // pin defintions
-#define SCK_PIN  14
-#define MOSI_PIN 13
-#define MISO_PIN 12
+#define SCK_PIN  19
+#define MOSI_PIN 18
+#define MISO_PIN 20
 
 // constants for the frame
 #define SB0 0
