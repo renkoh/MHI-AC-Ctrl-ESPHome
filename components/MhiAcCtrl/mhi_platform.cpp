@@ -1,5 +1,7 @@
 #include "mhi_platform.h"
 #include <esp_timer.h>
+#include <cstdint>
+#include <cmath>
 
 namespace esphome {
 namespace mhi {
@@ -78,7 +80,7 @@ void MhiPlatform::set_room_temperature(float value) {
 }
 
 void MhiPlatform::transfer_room_temperature(float value) {
-    if (isnan(value)) {
+    if (std::isnan(value)) {
         mhi_ac_ctrl_core_.set_troom(0xff); // reset target, use internal sensor
     }
 
