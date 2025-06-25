@@ -85,7 +85,7 @@ void MhiPlatform::transfer_room_temperature(float value) {
     }
 
     if ((value > -10) & (value < 48)) {
-        byte tmp = value * 4 + 61;
+        uint8_t tmp = value * 4 + 61;
         this->mhi_ac_ctrl_core_.set_troom(value * 4 + 61);        
         ESP_LOGD(TAG, "set room_temp_api: %f %i %i", value, (byte)(value * 4 + 61), (byte)tmp);
     }
