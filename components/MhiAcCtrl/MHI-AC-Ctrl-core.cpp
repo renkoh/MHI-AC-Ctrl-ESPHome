@@ -166,8 +166,8 @@ int MHI_AC_Ctrl_Core::loop(uint32_t max_time_ms) {
   if (frame++ <= 2) {                       // use opdata request only for 2 subsequent frames
     if (doubleframe) {                      // start when MISO_frame[DB14] bit2 is set
       if (erropdataCnt == 0) {
-        MISO_frame[DB6] = pgm_read_word(opdata + opdataNo);
-        MISO_frame[DB9] = pgm_read_word(opdata + opdataNo) >> 8;
+        MISO_frame[DB6] = opdata[opdataNo][0];
+        MISO_frame[DB9] = opdata[opdataNo][1];
         opdataNo = (opdataNo + 1) % opdataCnt;
       }
 
@@ -218,8 +218,8 @@ int MHI_AC_Ctrl_Core::loop(uint32_t max_time_ms) {
   MISO_frame[DB3] = new_Troom;  // from MQTT or DS18x20
 
   uint16_t checksum = calc_checksum(MISO_frame);
-  MISO_frame[CBH] = highByte(checksum);
-  MISO_frame[CBL] = lowByte(checksum);
+  MISO_frame[CBH] = (checksum >> 8) & 0xFF;
+  MISO_frame[CBL] = checksum & 0xFF;
 
   if (frameSize == 33) { // Only for framesize 33 (WF-RAC)
     MISO_frame[DB16] = 0;
@@ -232,7 +232,7 @@ int MHI_AC_Ctrl_Core::loop(uint32_t max_time_ms) {
     new_VanesLR1 = 0;
 
     checksum = calc_checksumFrame33(MISO_frame);
-    MISO_frame[CBL2] = lowByte(checksum);
+    MISO_frame[CBL2] = checksum & 0xFF;
   }
   // read/write MOSI/MISO frame
   for (uint8_t byte_cnt = 0; byte_cnt < frameSize; byte_cnt++) { // read and write a data packet of 20 bytes
@@ -267,7 +267,7 @@ int MHI_AC_Ctrl_Core::loop(uint32_t max_time_ms) {
 
   if (frameSize == 33) { // Only for framesize 33 (WF-RAC)
     checksum = calc_checksumFrame33(MOSI_frame);
-    if ( MOSI_frame[CBL2] != lowByte(checksum ) ) 
+    if ( MOSI_frame[CBL2] != (checksum & 0xFF) ) 
       return err_msg_invalid_checksum;
   }
 
