@@ -109,9 +109,10 @@ inline unsigned long idf_millis(void) {
  * Maps to Arduino pgm_read_word()
  * 
  * For ESP-IDF, returns the value as-is since const pointers directly access flash
+ * Accepts any pointer type (void*, byte*, etc.) for compatibility
  */
-inline uint16_t pgm_read_word(const uint16_t* p) {
-  return *p;
+inline uint16_t pgm_read_word(const void* p) {
+  return *reinterpret_cast<const uint16_t*>(p);
 }
 
 // ============================================================================
