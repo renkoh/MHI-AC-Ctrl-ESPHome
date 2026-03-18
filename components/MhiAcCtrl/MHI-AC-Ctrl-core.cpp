@@ -2,6 +2,9 @@
 // implements the core functions (read & write SPI)
 
 #include "MHI-AC-Ctrl-core.h"
+#include "esp_log.h"
+
+static const char* TAG = "MHI_AC_Ctrl";
 
 uint16_t calc_checksum(byte* frame) {
   uint16_t checksum = 0;
@@ -54,9 +57,9 @@ void MHI_AC_Ctrl_Core::reset_old_values() {  // used e.g. when MQTT connection t
 
 void MHI_AC_Ctrl_Core::init() {
   //MeasureFrequency(m_cbiStatus);
-  pinMode(SCK_PIN, INPUT);
-  pinMode(MOSI_PIN, INPUT);
-  pinMode(MISO_PIN, OUTPUT);
+  idf_pinMode(SCK_PIN, INPUT);
+  idf_pinMode(MOSI_PIN, INPUT);
+  idf_pinMode(MISO_PIN, OUTPUT);
   MHI_AC_Ctrl_Core::reset_old_values();
 }
 
@@ -125,7 +128,7 @@ void MHI_AC_Ctrl_Core::set_frame_size(byte framesize) {
 int MHI_AC_Ctrl_Core::loop(uint max_time_ms) {
   const byte opdataCnt = sizeof(opdata) / sizeof(byte) / 2;
   static byte opdataNo = 0;               //
-  long startMillis = millis();             // start time of this loop run
+  unsigned long startMillis = idf_millis();             // start time of this loop run
   byte MOSI_byte;                         // received MOSI byte
   bool new_datapacket_received = false;   // indicated that a new frame was received
   static byte erropdataCnt = 0;           // number of expected error operating data
@@ -142,11 +145,11 @@ static byte MOSI_frame[33];
 
    
   call_counter++;
-  int SCKMillis = millis();               // time of last SCK low level
-  while (millis() - SCKMillis < 5) {      // wait for 5ms stable high signal to detect a frame start
-    if (!digitalRead(SCK_PIN))
-      SCKMillis = millis();
-    if (millis() - startMillis > max_time_ms)
+  unsigned long SCKMillis = idf_millis();               // time of last SCK low level
+  while (idf_millis() - SCKMillis < 5) {      // wait for 5ms stable high signal to detect a frame start
+    if (!idf_digitalRead(SCK_PIN))
+      SCKMillis = idf_millis();
+    if (idf_millis() - startMillis > max_time_ms)
       return err_msg_timeout_SCK_low;       // SCK stuck@ low error detection
   }
   // build the next MISO frame
@@ -241,17 +244,17 @@ static byte MOSI_frame[33];
     MOSI_byte = 0;
     byte bit_mask = 1;
     for (uint8_t bit_cnt = 0; bit_cnt < 8; bit_cnt++) { // read and write 1 byte
-      SCKMillis = millis();
-      while (digitalRead(SCK_PIN)) { // wait for falling edge
-        if (millis() - startMillis > max_time_ms)
+      unsigned long SCKMillis = idf_millis();
+      while (idf_digitalRead(SCK_PIN)) { // wait for falling edge
+        if (idf_millis() - startMillis > max_time_ms)
           return err_msg_timeout_SCK_high;       // SCK stuck@ high error detection
       } 
       if ((MISO_frame[byte_cnt] & bit_mask) > 0)
-        digitalWrite(MISO_PIN, 1);
+        idf_digitalWrite(MISO_PIN, 1);
       else
-        digitalWrite(MISO_PIN, 0);
-      while (!digitalRead(SCK_PIN)) {} // wait for rising edge
-      if (digitalRead(MOSI_PIN))
+        idf_digitalWrite(MISO_PIN, 0);
+      while (!idf_digitalRead(SCK_PIN)) {} // wait for rising edge
+      if (idf_digitalRead(MOSI_PIN))
         MOSI_byte += bit_mask;
       bit_mask = bit_mask << 1;
     }
@@ -331,8 +334,8 @@ static byte MOSI_frame[33];
         lastTroomInternalMillis = 0;
       }
       else                                                               //  internal sensor used
-        if ((unsigned long)(millis() - lastTroomInternalMillis) > minTimeInternalTroom) { // Only publish when last change was more then minTimeInternalTroom ago
-          lastTroomInternalMillis = millis();
+        if ((unsigned long)(idf_millis() - lastTroomInternalMillis) > minTimeInternalTroom) { // Only publish when last change was more then minTimeInternalTroom ago
+          lastTroomInternalMillis = idf_millis();
           status_troom_old = MOSI_frame[DB3];
           m_cbiStatus->cbiStatusFunction(status_troom, status_troom_old);
         }
@@ -594,7 +597,7 @@ static byte MOSI_frame[33];
         break;
       default:    // unknown operating data
         m_cbiStatus->cbiStatusFunction(opdata_unknown, MOSI_frame[DB10] << 8 | MOSI_frame[DB9]);
-        // Serial.printf("Unknown operating data, MOSI_frame[DB9]=%i MOSI_frame[D10]=%i\n", MOSI_frame[DB9], MOSI_frame[DB10]);
+        // ESP_LOGI("Unknown operating data, MOSI_frame[DB9]=%i MOSI_frame[D10]=%i\n", MOSI_frame[DB9], MOSI_frame[DB10]);
     }
   }
   return call_counter;

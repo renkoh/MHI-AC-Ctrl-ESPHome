@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Arduino.h>
+#include "idf_compat.h"
 
 // comment out the data you are not interested, but at least leave one row !
 const byte opdata[][2] PROGMEM = {

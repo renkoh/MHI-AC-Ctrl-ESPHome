@@ -51,7 +51,7 @@ void MhiPlatform::loop() {
         this->room_temp_api_active_ = false;
     }
 
-    if(this->room_temp_api_active_ && millis() - this->room_temp_api_timeout_start_ >= room_temp_api_timeout_*1000) {
+    if(this->room_temp_api_active_ && idf_millis() - this->room_temp_api_timeout_start_ >= room_temp_api_timeout_*1000) {
 
         mhi_ac_ctrl_core_.set_troom(0xff);  // use IU temperature sensor
         ESP_LOGD(TAG, "did not receive a room_temp_api value, using IU temperature sensor");
@@ -85,7 +85,7 @@ void MhiPlatform:: cbiStatusFunction(ACStatus status, int value) {
 }
 
 void MhiPlatform::set_room_temperature(float value) {
-    this->room_temp_api_timeout_start_ = millis(); // reset timeout
+    this->room_temp_api_timeout_start_ = idf_millis(); // reset timeout
     this->room_temp_api_active_ = true;
     this->transfer_room_temperature(value);
 }
