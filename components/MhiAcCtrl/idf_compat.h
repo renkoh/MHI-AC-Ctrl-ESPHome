@@ -10,6 +10,10 @@
 #include "driver/gpio.h"
 #include "esp_timer.h"
 #include <cstring>
+#include <cmath>
+
+// Make isnan available without std:: prefix for Arduino compatibility
+using std::isnan;
 
 // ============================================================================
 // GPIO Mode Constants (Arduino compatibility) - MUST be before functions
