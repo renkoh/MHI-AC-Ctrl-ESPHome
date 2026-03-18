@@ -12,6 +12,32 @@
 #include <cstring>
 
 // ============================================================================
+// GPIO Mode Constants (Arduino compatibility) - MUST be before functions
+// ============================================================================
+
+#ifndef INPUT
+#define INPUT     0
+#define OUTPUT    1
+#define INPUT_PULLUP  2
+#endif
+
+// ============================================================================
+// Arduino Type Aliases
+// ============================================================================
+
+#ifndef byte
+typedef unsigned char byte;
+#endif
+
+#ifndef boolean
+typedef bool boolean;
+#endif
+
+#ifndef uint
+typedef unsigned int uint;
+#endif
+
+// ============================================================================
 // GPIO Functions
 // ============================================================================
 
@@ -107,27 +133,3 @@ inline uint8_t highByte(uint16_t value) {
 inline uint8_t lowByte(uint16_t value) {
   return value & 0xFF;
 }
-
-// ============================================================================
-// Arduino Type Aliases
-// ============================================================================
-
-#ifndef byte
-typedef unsigned char byte;
-#endif
-
-#ifndef boolean
-typedef bool boolean;
-#endif
-
-// ============================================================================
-// GPIO Mode Constants (Arduino compatibility)
-// ============================================================================
-
-#ifndef INPUT
-#define INPUT     0
-#define OUTPUT    1
-#define INPUT_PULLUP  2
-#endif
-
-#endif  // IDF_COMPAT_H

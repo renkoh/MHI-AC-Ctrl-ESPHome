@@ -50,7 +50,7 @@ private:
     float temperature_offset_ = 0.0f;
 
     int frame_size_;
-    unsigned long room_temp_api_timeout_start_ = millis();
+    unsigned long room_temp_api_timeout_start_ = 0;
     unsigned long room_temp_api_timeout_;
     bool room_temp_api_active_ = false;
     int sck_pin_ = -1;
