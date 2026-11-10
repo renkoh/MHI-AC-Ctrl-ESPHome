@@ -2,13 +2,7 @@
 // implements the core functions (read & write SPI)
 
 #include "MHI-AC-Ctrl-core.h"
-#include "driver/gpio.h"
-#include "esp_timer.h"
-
-// returns milliseconds since boot, wraps around every ~49.7 days (same as Arduino millis())
-static inline uint32_t mhi_millis() {
-  return static_cast<uint32_t>(esp_timer_get_time() / 1000);
-}
+#include "mhi_hal.h"
 
 uint16_t calc_checksum(uint8_t* frame) {
   uint16_t checksum = 0;
@@ -61,18 +55,9 @@ void MHI_AC_Ctrl_Core::reset_old_values() {  // used e.g. when MQTT connection t
 
 void MHI_AC_Ctrl_Core::init() {
   //MeasureFrequency(m_cbiStatus);
-  gpio_config_t io_conf = {};
-  io_conf.mode = GPIO_MODE_INPUT;
-  io_conf.pin_bit_mask = (1ULL << SCK_PIN) | (1ULL << MOSI_PIN);
-  io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
-  io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
-  io_conf.intr_type = GPIO_INTR_DISABLE;
-  gpio_config(&io_conf);
-
-  io_conf.mode = GPIO_MODE_OUTPUT;
-  io_conf.pin_bit_mask = 1ULL << MISO_PIN;
-  gpio_config(&io_conf);
-
+  mhi_pin_mode_input(SCK_PIN);
+  mhi_pin_mode_input(MOSI_PIN);
+  mhi_pin_mode_output(MISO_PIN);
   MHI_AC_Ctrl_Core::reset_old_values();
 }
 
@@ -160,7 +145,7 @@ static uint8_t MOSI_frame[33];
   call_counter++;
   uint32_t SCKMillis = mhi_millis();       // time of last SCK low level
   while (mhi_millis() - SCKMillis < 5) {   // wait for 5ms stable high signal to detect a frame start
-    if (!gpio_get_level(SCK_PIN))
+    if (!mhi_digital_read(SCK_PIN))
       SCKMillis = mhi_millis();
     if (mhi_millis() - startMillis > max_time_ms)
       return err_msg_timeout_SCK_low;       // SCK stuck@ low error detection
@@ -258,16 +243,16 @@ static uint8_t MOSI_frame[33];
     uint8_t bit_mask = 1;
     for (uint8_t bit_cnt = 0; bit_cnt < 8; bit_cnt++) { // read and write 1 byte
       SCKMillis = mhi_millis();
-      while (gpio_get_level(SCK_PIN)) { // wait for falling edge
+      while (mhi_digital_read(SCK_PIN)) { // wait for falling edge
         if (mhi_millis() - startMillis > max_time_ms)
           return err_msg_timeout_SCK_high;       // SCK stuck@ high error detection
       }
       if ((MISO_frame[byte_cnt] & bit_mask) > 0)
-        gpio_set_level(MISO_PIN, 1);
+        mhi_digital_write(MISO_PIN, 1);
       else
-        gpio_set_level(MISO_PIN, 0);
-      while (!gpio_get_level(SCK_PIN)) {} // wait for rising edge
-      if (gpio_get_level(MOSI_PIN))
+        mhi_digital_write(MISO_PIN, 0);
+      while (!mhi_digital_read(SCK_PIN)) {} // wait for rising edge
+      if (mhi_digital_read(MOSI_PIN))
         MOSI_byte += bit_mask;
       bit_mask = bit_mask << 1;
     }

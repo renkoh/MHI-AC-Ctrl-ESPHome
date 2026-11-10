@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "driver/gpio.h"
 
 // comment out the data you are not interested, but at least leave one row !
 const uint8_t opdata[][2] = {
@@ -35,9 +34,9 @@ const uint8_t opdata[][2] = {
 
 // Declare extern variables for the pins the only change to the original code
 // This allows to set the pins in the configuration file
-extern gpio_num_t SCK_PIN;
-extern gpio_num_t MOSI_PIN;
-extern gpio_num_t MISO_PIN;
+extern int SCK_PIN;
+extern int MOSI_PIN;
+extern int MISO_PIN;
 
 // constants for the frame
 #define SB0 0

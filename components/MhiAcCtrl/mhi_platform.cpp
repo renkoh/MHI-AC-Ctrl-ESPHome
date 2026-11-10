@@ -1,9 +1,9 @@
 #include "mhi_platform.h"
 #include <cmath>
 
-gpio_num_t SCK_PIN = GPIO_NUM_14;
-gpio_num_t MOSI_PIN = GPIO_NUM_13;
-gpio_num_t MISO_PIN = GPIO_NUM_12;
+int SCK_PIN = 14;
+int MOSI_PIN = 13;
+int MISO_PIN = 12;
 namespace esphome {
 namespace mhi {
 
@@ -13,13 +13,13 @@ static const char* TAG = "mhi.platform";
 void MhiPlatform::setup() {
     
     if (this->sck_pin_ >= 0) { //
-      SCK_PIN = static_cast<gpio_num_t>(this->sck_pin_);
+      SCK_PIN = this->sck_pin_;
     }
     if (this->mosi_pin_ >= 0) { //
-      MOSI_PIN = static_cast<gpio_num_t>(this->mosi_pin_);
+      MOSI_PIN = this->mosi_pin_;
     }
     if (this->miso_pin_ >= 0) { //
-      MISO_PIN = static_cast<gpio_num_t>(this->miso_pin_);
+      MISO_PIN = this->miso_pin_;
     }
 
     this->mhi_ac_ctrl_core_.MHIAcCtrlStatus(this);
