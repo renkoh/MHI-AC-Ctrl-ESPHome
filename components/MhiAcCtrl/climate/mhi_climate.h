@@ -34,7 +34,7 @@ private:
     ACPower power_;
     ACMode mode_;
     float tsetpoint_;
-    uint fan_;
+    int fan_;
     ACVanes vanes_;
     ACVanesLR vanesLR_;
     int vanesLR_pos_old_state_;

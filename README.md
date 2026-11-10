@@ -49,6 +49,18 @@ This will allow for lower temperature heating or cooling.
  - Hardware designed by [fonske](https://github.com/fonske) can be found [here](JLCPCB/Hardware.md)
  - A ready-to-go esp32-s3 based airco controller can be bought at [tinytronics.nl](https://www.tinytronics.nl/en/development-boards/microcontroller-boards/with-wi-fi/universal-air-conditioning-controller-esp32-s3) instructions can be found [here](UniversalAircoController/README.md)
 
+# ESP32-C6 / ESP-IDF
+The component is framework-agnostic and can be built with the ESP-IDF framework, which is required for chips without Arduino support such as the ESP32-C6:
+
+```yaml
+esp32:
+  board: esp32-c6-devkitc-1
+  framework:
+    type: esp-idf
+```
+
+See [`examples/esp32-c6.yaml`](examples/esp32-c6.yaml) for a complete example. Note that GPIO12/13/14 (the default SCK/MOSI/MISO pins) are safe to use on the ESP32-C6; avoid the strapping pins GPIO4, GPIO5, GPIO8 and GPIO9.
+
 
 # Changelog:
 
